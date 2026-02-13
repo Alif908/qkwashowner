@@ -19,7 +19,6 @@ class TermsAndConditionsPage extends StatelessWidget {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Left: QK WASH
                   const Text(
                     'QK WASH',
                     style: TextStyle(
@@ -29,7 +28,6 @@ class TermsAndConditionsPage extends StatelessWidget {
                     ),
                   ),
 
-                  // Center: Terms of service and Privacy policy
                   const Expanded(
                     child: Center(
                       child: Text(

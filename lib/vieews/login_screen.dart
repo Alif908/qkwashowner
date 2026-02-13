@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:qkwashowner/services/api_service.dart';
 import 'package:qkwashowner/vieews/home_screen.dart';
 import 'package:qkwashowner/vieews/termsandservice.dart';
 
@@ -13,6 +14,7 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  final ApiService _apiService = ApiService(); 
   bool _obscurePassword = true;
   bool _isLoading = false;
 
@@ -23,7 +25,6 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  // Email validation
   String? _validateEmail(String? value) {
     if (value == null || value.isEmpty) {
       return 'Please enter your email';
@@ -35,7 +36,6 @@ class _LoginPageState extends State<LoginPage> {
     return null;
   }
 
-  // Password validation
   String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) {
       return 'Please enter your password';
@@ -46,9 +46,7 @@ class _LoginPageState extends State<LoginPage> {
     return null;
   }
 
-  // Login function
   Future<void> _handleLogin() async {
-    // Validate form
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -57,36 +55,28 @@ class _LoginPageState extends State<LoginPage> {
       _isLoading = true;
     });
 
-    // Simulate API call (replace with your actual login logic)
-    await Future.delayed(const Duration(seconds: 2));
-
-    // TODO: Replace this with your actual authentication logic
     final email = _emailController.text.trim();
     final password = _passwordController.text.trim();
 
-    // Dummy login check (REPLACE THIS WITH YOUR ACTUAL LOGIN)
-    if (email.isNotEmpty && password.isNotEmpty) {
-      // Success - Navigate to home
-      setState(() {
-        _isLoading = false;
-      });
+    final response = await _apiService.login(
+      email: email,
+      password: password,
+    );
 
-      if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => HomeScreen()),
-        );
-      }
+    setState(() {
+      _isLoading = false;
+    });
+
+    if (response.success && mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => HomeScreen()),
+      );
     } else {
-      // Failed login
-      setState(() {
-        _isLoading = false;
-      });
-
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Invalid email or password'),
+          SnackBar(
+            content: Text(response.errorMessage ?? 'Invalid email or password'),
             backgroundColor: Colors.red,
           ),
         );
@@ -100,29 +90,27 @@ class _LoginPageState extends State<LoginPage> {
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // Blue OVAL Bottom Right - CHANGED TO OVAL SHAPE
           Positioned(
             bottom: -150,
             left: -30,
             child: IgnorePointer(
               child: Container(
                 width: 470,
-                height: 200, // Reduced height for oval shape
+                height: 200, 
                 decoration: BoxDecoration(
                   color: Color(0xFF2196F3),
-                  shape: BoxShape.rectangle, // Changed from circle
+                  shape: BoxShape.rectangle, 
                   borderRadius: BorderRadius.all(
                     Radius.elliptical(
                       252.5,
                       125,
-                    ), // Creates oval (width/2, height/2)
+                    ),
                   ),
                 ),
               ),
             ),
           ),
 
-          // Blue Circle Top Right
           Positioned(
             top: 300,
             right: -40,
@@ -138,7 +126,6 @@ class _LoginPageState extends State<LoginPage> {
             ),
           ),
 
-          // Blue Circle Bottom Left
           Positioned(
             bottom: 50,
             left: -40,
@@ -154,7 +141,6 @@ class _LoginPageState extends State<LoginPage> {
             ),
           ),
 
-          // Main Content
           SafeArea(
             child: SingleChildScrollView(
               child: ConstrainedBox(
@@ -173,7 +159,6 @@ class _LoginPageState extends State<LoginPage> {
                       children: [
                         const SizedBox(height: 126),
 
-                        // QK WASH Title
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
@@ -191,7 +176,6 @@ class _LoginPageState extends State<LoginPage> {
 
                         const SizedBox(height: 14),
 
-                        // Black Description Box
                         Container(
                           width: double.infinity,
                           padding: const EdgeInsets.symmetric(
@@ -206,17 +190,16 @@ class _LoginPageState extends State<LoginPage> {
                             'This app allows owners to monitor earnings\nand manage machine usage history.',
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              color: Colors.white,
                               fontSize: 11,
-                              height: 1.5,
+                              color: Colors.white,
+                              height: 1.4,
                               fontWeight: FontWeight.w400,
                             ),
                           ),
                         ),
 
-                        const SizedBox(height: 102),
+                        const SizedBox(height: 28),
 
-                        // Login Title
                         const Text(
                           'Login',
                           style: TextStyle(
@@ -228,7 +211,6 @@ class _LoginPageState extends State<LoginPage> {
 
                         const SizedBox(height: 7),
 
-                        // Subtitle
                         const Text(
                           'Please login to your account.',
                           style: TextStyle(
@@ -240,7 +222,6 @@ class _LoginPageState extends State<LoginPage> {
 
                         const SizedBox(height: 28),
 
-                        // Email Address Field with Validation
                         Container(
                           decoration: BoxDecoration(
                             color: Colors.white,
@@ -284,7 +265,6 @@ class _LoginPageState extends State<LoginPage> {
 
                         const SizedBox(height: 20),
 
-                        // Password Field with Validation
                         Container(
                           decoration: BoxDecoration(
                             color: Colors.white,
@@ -342,7 +322,6 @@ class _LoginPageState extends State<LoginPage> {
 
                         const SizedBox(height: 20),
 
-                        // Login Button with Loading State
                         Container(
                           width: double.infinity,
                           height: 42,
@@ -388,7 +367,7 @@ class _LoginPageState extends State<LoginPage> {
 
                         const SizedBox(height: 20),
 
-                        // Terms and Conditions Link
+                        // Terms and Conditions 
                         Center(
                           child: GestureDetector(
                             onTap: () {

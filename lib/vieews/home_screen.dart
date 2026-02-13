@@ -1,8 +1,113 @@
 import 'package:flutter/material.dart';
+import 'package:qkwashowner/models/api_models.dart';
+import 'package:qkwashowner/services/api_service.dart';
 import 'package:qkwashowner/vieews/devicedetailspage.dart';
+import 'package:qkwashowner/vieews/login_screen.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
   const HomeScreen({Key? key}) : super(key: key);
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  final ApiService _apiService = ApiService();
+  final ScrollController _scrollController = ScrollController();
+  HubStatus? _hubStatus;
+  List<Device> _devices = [];
+  bool _isLoadingStatus = true;
+  bool _isLoadingDevices = true;
+  String? _errorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadData() async {
+    await Future.wait([_loadDeviceStatus(), _loadDeviceInfo()]);
+  }
+
+  Future<void> _loadDeviceStatus() async {
+    setState(() {
+      _isLoadingStatus = true;
+      _errorMessage = null;
+    });
+
+    final response = await _apiService.getDeviceStatus();
+
+    if (mounted) {
+      setState(() {
+        _isLoadingStatus = false;
+        if (response.success && response.data != null) {
+          if (response.data!.hubs.isNotEmpty) {
+            _hubStatus = response.data!.hubs.first;
+          }
+        } else {
+          _errorMessage = response.errorMessage;
+        }
+      });
+    }
+  }
+
+  Future<void> _loadDeviceInfo() async {
+    setState(() {
+      _isLoadingDevices = true;
+    });
+
+    final response = await _apiService.getDeviceInfo();
+
+    if (mounted) {
+      setState(() {
+        _isLoadingDevices = false;
+        if (response.success && response.data != null) {
+          if (response.data!.hubs.isNotEmpty) {
+            _devices = response.data!.hubs.first.devices;
+          }
+        }
+      });
+    }
+  }
+
+  Future<void> _handleLogout() async {
+    final shouldLogout = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldLogout == true && mounted) {
+      _apiService.logout();
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => LoginPage()),
+      );
+    }
+  }
+
+  Future<void> _handleRefresh() async {
+    await _loadData();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,319 +142,341 @@ class HomeScreen extends StatelessWidget {
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Row(
-                children: const [
-                  Text(
-                    'Logout',
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
+            child: GestureDetector(
+              onTap: _handleLogout,
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Row(
+                  children: const [
+                    Text(
+                      'Logout',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
-                  ),
-                  SizedBox(width: 4),
-                  Icon(Icons.logout, color: Colors.black, size: 16),
-                ],
+                    SizedBox(width: 4),
+                    Icon(Icons.logout, color: Colors.black, size: 16),
+                  ],
+                ),
               ),
             ),
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Hub Info Section
-            Container(
-              width: double.infinity,
-              color: const Color.fromARGB(255, 191, 186, 203),
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: const [
-                  Text(
-                    'Hub ID #1234',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.black54,
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'KERALA HOSTEL',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            // Earnings Cards Section
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Left Column - Today's and Last Month's Earnings
-                  Expanded(
-                    child: Column(
-                      children: [
-                        // Today's Earnings Card
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFB2DFDB),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                "Today's Earnings",
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                '\$ 350',
-                                style: TextStyle(
-                                  fontSize: 28,
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              Row(
-                                children: const [
-                                  Text(
-                                    '3 washes',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.black87,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                  SizedBox(width: 16),
-                                  Text(
-                                    '2 dryers',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.black87,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        // Last Month's Earnings Card
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF81C784),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: const [
-                              Text(
-                                "Last Month's Earnings",
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              SizedBox(height: 8),
-                              Text(
-                                '\$ 1350',
-                                style: TextStyle(
-                                  fontSize: 28,
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  // Right Column - Total Earnings Card
-                  Expanded(
-                    child: Container(
-                      height: 335,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: const Color.fromARGB(255, 132, 126, 186),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
-                          Text(
-                            'Total Earnings',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.black,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            '\$ 3500',
-                            style: TextStyle(
-                              fontSize: 28,
-                              color: Colors.black,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            // Your Devices Section
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                ),
+      body: RefreshIndicator(
+        onRefresh: _handleRefresh,
+        color: const Color(0xFF2196F3),
+        backgroundColor: Colors.white,
+        child: _errorMessage != null
+            ? _buildErrorView()
+            : SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Your Devices',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.black,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
+                    // Hub Info Section
+                    _buildHubInfoSection(),
                     const SizedBox(height: 16),
-                    // Scrollable Device Cards
-                    SizedBox(
-                      height: 240,
-                      child: ScrollbarTheme(
-                        data: ScrollbarThemeData(
-                          thumbColor: MaterialStateProperty.all(
-                            const Color.fromARGB(255, 141, 193, 236),
-                          ),
-                          trackColor: MaterialStateProperty.all(
-                            Colors.grey.shade300,
-                          ),
-                          thickness: MaterialStateProperty.all(4),
-                          radius: const Radius.circular(8),
-                          thumbVisibility: MaterialStateProperty.all(true),
-                          trackVisibility: MaterialStateProperty.all(true),
-                        ),
-                        child: Scrollbar(
-                          child: ListView(
-                            padding: const EdgeInsets.only(right: 12),
-                            children: [
-                              // Washer 01 - Online
-                              _buildDeviceCard(
-                                context: context,
-                                deviceName: 'Washer 01',
-                                machineId: '#123456',
-                                status: 'Online',
-                                statusColor: const Color(0xFF4CAF50),
-                                iconPath:
-                                    'assets/images/online and maintaince.png',
-                                statusIcon: Icons.access_time,
-                              ),
-                              const SizedBox(height: 12),
-                              // Dryer 01 - Running
-                              _buildDeviceCard(
-                                context: context,
-                                deviceName: 'Dryer 01',
-                                machineId: '#123456',
-                                status: 'Running',
-                                statusColor: const Color(0xFF2196F3),
-                                iconPath: 'assets/images/ruuning machine.png',
-                                statusIcon: Icons.hourglass_empty,
-                              ),
-                              const SizedBox(height: 12),
-                              // Washer 02 - Maintenance
-                              _buildDeviceCard(
-                                context: context,
-                                deviceName: 'Washer 02',
-                                machineId: '#23456',
-                                status: 'Maintenance',
-                                statusColor: const Color(0xFFF44336),
-                                iconPath:
-                                    'assets/images/online and maintaince.png',
-                                statusIcon: Icons.build,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
+                    // Earnings Cards Section
+                    _buildEarningsSection(),
+                    const SizedBox(height: 20),
+                    // Your Devices Section
+                    _buildDevicesSection(),
+                    const SizedBox(height: 20),
                   ],
                 ),
               ),
+      ),
+    );
+  }
+
+  Widget _buildErrorView() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, size: 64, color: Colors.red.shade300),
+          const SizedBox(height: 16),
+          Text(
+            _errorMessage ?? 'An error occurred',
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 14, color: Colors.black87),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: _handleRefresh,
+            icon: const Icon(Icons.refresh),
+            label: const Text('Retry'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF2196F3),
+              foregroundColor: Colors.white,
             ),
-            const SizedBox(height: 20),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHubInfoSection() {
+    if (_isLoadingStatus) {
+      return Container(
+        width: double.infinity,
+        color: const Color.fromARGB(255, 191, 186, 203),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: const [
+            SizedBox(width: 100, height: 12, child: LinearProgressIndicator()),
+            SizedBox(height: 8),
+            SizedBox(width: 150, height: 16, child: LinearProgressIndicator()),
+          ],
+        ),
+      );
+    }
+
+    return Container(
+      width: double.infinity,
+      color: const Color.fromARGB(255, 191, 186, 203),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Hub ID #${_hubStatus?.hubId ?? 'N/A'}',
+            style: const TextStyle(
+              fontSize: 12,
+              color: Colors.black54,
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            _hubStatus?.hubName.toUpperCase() ?? 'NO HUB',
+            style: const TextStyle(
+              fontSize: 16,
+              color: Colors.black,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEarningsSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              children: [
+                _buildEarningCard(
+                  title: "Today's Earnings",
+                  amount: '\$ ${_hubStatus?.todayEarnings ?? 0}',
+                  color: const Color(0xFFB2DFDB),
+                  washes: _hubStatus?.todayWashes ?? 0,
+                  dryers: _hubStatus?.todayDryers ?? 0,
+                  isLoading: _isLoadingStatus,
+                ),
+                const SizedBox(height: 10),
+                _buildEarningCard(
+                  title: "Last Month's Earnings",
+                  amount: '\$ ${_hubStatus?.lastMonthEarnings ?? 0}',
+                  color: const Color(0xFF81C784),
+                  isLoading: _isLoadingStatus,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: _buildEarningCard(
+              title: 'Total Earnings',
+              amount: '\$ ${_hubStatus?.totalEarnings ?? 0}',
+              color: const Color.fromARGB(255, 132, 126, 186),
+              height: 300,
+              isLoading: _isLoadingStatus,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEarningCard({
+    required String title,
+    required String amount,
+    required Color color,
+    int? washes,
+    int? dryers,
+    double? height,
+    required bool isLoading,
+  }) {
+    return Container(
+      height: height,
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: isLoading
+          ? const Center(
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: height != null
+                  ? MainAxisAlignment.center
+                  : MainAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    color: Colors.black,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                // const SizedBox(height: 8),
+                Text(
+                  amount,
+                  style: const TextStyle(
+                    fontSize: 28,
+                    color: Colors.black,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                if (washes != null && dryers != null) ...[
+                  // const SizedBox(height: ),
+                  Row(
+                    children: [
+                      Text(
+                        '$washes washes',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Colors.black87,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      Text(
+                        '$dryers dryers',
+                        style: const TextStyle(
+                          fontSize: 11,
+                          color: Colors.black87,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+    );
+  }
+
+  Widget _buildDevicesSection() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Your Devices',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.black,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 13),
+            // Device List
+            SizedBox(
+              height: 240,
+              child: _isLoadingDevices
+                  ? const Center(child: CircularProgressIndicator())
+                  : _devices.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'No devices found',
+                        style: TextStyle(fontSize: 14, color: Colors.black54),
+                      ),
+                    )
+                  : ScrollbarTheme(
+                      data: ScrollbarThemeData(
+                        thumbColor: MaterialStateProperty.all(
+                          const Color.fromARGB(255, 141, 193, 236),
+                        ),
+                        trackColor: MaterialStateProperty.all(
+                          Colors.grey.shade300,
+                        ),
+                        thickness: MaterialStateProperty.all(4),
+                        radius: const Radius.circular(8),
+                        thumbVisibility: MaterialStateProperty.all(true),
+                        trackVisibility: MaterialStateProperty.all(true),
+                      ),
+                      child: Scrollbar(
+                        controller: _scrollController,
+                        child: ListView.separated(
+                          controller: _scrollController,
+                          padding: const EdgeInsets.only(right: 12, bottom: 4),
+                          itemCount: _devices.length,
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(height: 16),
+                          itemBuilder: (context, index) {
+                            final device = _devices[index];
+                            return _buildDeviceCard(device: device);
+                          },
+                        ),
+                      ),
+                    ),
+            ),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildDeviceCard({
-    required BuildContext context,
-    required String deviceName,
-    required String machineId,
-    required String status,
-    required Color statusColor,
-    required String iconPath,
-    required IconData statusIcon,
-  }) {
+  Widget _buildDeviceCard({required Device device}) {
+    print(
+      "homepage Device ${device.deviceId} status: [${device.deviceStatus}]",
+    );
     return GestureDetector(
       onTap: () {
-        // Navigate to Device Details Page
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => DeviceDetailPage(
-              deviceName: deviceName,
-              machineId: machineId,
-              status: status,
-              statusColor: statusColor,
-              iconPath: iconPath,
+        if (_hubStatus != null) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) =>
+                  DeviceDetailPage(device: device, hubStatus: _hubStatus!),
             ),
-          ),
-        );
+          );
+        }
       },
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
         decoration: BoxDecoration(
           color: const Color(0xFFBBDEFB),
           borderRadius: BorderRadius.circular(12),
@@ -362,40 +489,48 @@ class HomeScreen extends StatelessWidget {
               height: 48,
               padding: const EdgeInsets.all(6),
               decoration: BoxDecoration(
-                color: Colors.transparent,
-                borderRadius: BorderRadius.circular(6),
+                color: Colors.white.withOpacity(0.25),
+                borderRadius: BorderRadius.circular(8),
               ),
-              child: Image.asset(iconPath, fit: BoxFit.contain),
+              child: Image.asset(
+                device.getDeviceIconPath(),
+                fit: BoxFit.contain,
+              ),
             ),
-            const SizedBox(width: 10),
+            const SizedBox(width: 14),
             // Device Info
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    deviceName,
+                    '${device.deviceType} ${device.deviceId}',
                     style: const TextStyle(
-                      fontSize: 13,
+                      fontSize: 15,
                       color: Colors.black,
-                      fontWeight: FontWeight.w600,
+                      fontWeight: FontWeight.w700,
+                      height: 1.2,
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  const Text(
+                  const SizedBox(height: 3),
+                  Text(
                     'Machine ID',
                     style: TextStyle(
-                      fontSize: 10,
-                      color: Colors.black87,
+                      fontSize: 11,
+                      color: Colors.black.withOpacity(0.55),
                       fontWeight: FontWeight.w400,
+                      height: 1.2,
                     ),
                   ),
+                  const SizedBox(height: 1),
                   Text(
-                    machineId,
+                    '#${device.deviceId}',
                     style: const TextStyle(
-                      fontSize: 10,
+                      fontSize: 11,
                       color: Colors.black87,
                       fontWeight: FontWeight.w500,
+                      height: 1.2,
                     ),
                   ),
                 ],
@@ -403,21 +538,23 @@ class HomeScreen extends StatelessWidget {
             ),
             // Status Indicator and Icon
             Column(
-              mainAxisAlignment: MainAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
+                // Status Indicator Dot
                 Container(
-                  width: 12,
-                  height: 12,
+                  width: 14,
+                  height: 14,
                   decoration: BoxDecoration(
-                    color: statusColor,
+                    color: device.getStatusColor(),
                     shape: BoxShape.circle,
                   ),
                 ),
-                const SizedBox(height: 14),
+                const SizedBox(height: 10),
+                // Status Icon
                 Icon(
-                  statusIcon,
-                  color: Colors.white.withOpacity(0.9),
-                  size: 28,
+                  device.getStatusIcon(),
+                  color: Colors.white.withOpacity(0.75),
+                  size: 30,
                 ),
               ],
             ),
